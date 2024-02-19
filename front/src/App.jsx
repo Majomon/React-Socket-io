@@ -1,35 +1,49 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+import { io } from "socket.io-client";
+import { useState, useEffect } from "react";
+import { LiMensaje, UlMensajes } from "./ui-components";
+
+const socket = io("http://localhost:3000");
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isConnected, setIsConnected] = useState(false);
+  const [nuevoMensaje, setNuevoMensaje] = useState("");
+  const [mensajes, setMensajes] = useState([]);
+
+  useEffect(() => {
+    socket.on("connect", () => setIsConnected(true));
+
+    socket.on("chat_message", (data) => {
+      setMensajes((mensajes) => [...mensajes, data]);
+    });
+
+    return () => {
+      socket.off("connect");
+      socket.off("chat_message");
+    };
+  }, []);
+
+  const enviarMensaje = () => {
+    socket.emit("chat_message", {
+      usuario: socket.id,
+      mensaje: nuevoMensaje,
+    });
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="App">
+      <h2>{isConnected ? "CONECTADO" : "NO CONECTADO"}</h2>
+      <UlMensajes>
+        {mensajes.map((mensaje,index) => (
+          <LiMensaje key={index}>
+            {mensaje.usuario}: {mensaje.mensaje}
+          </LiMensaje>
+        ))}
+      </UlMensajes>
+      <input type="text" onChange={(e) => setNuevoMensaje(e.target.value)} />
+      <button onClick={enviarMensaje}>Enviar</button>
+    </div>
+  );
 }
 
-export default App
+export default App;
